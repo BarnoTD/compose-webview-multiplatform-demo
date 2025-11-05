@@ -1565,12 +1565,8 @@
 
         
 
-                @media (min-width: 768px) {
-
-                    .add-appointment-btn {
-
-                        display: none; /* Hide on larger screens */
-
-                    }
-
-                }
+        @media (min-width: 768px) and (max-width: 1200px) {
+            .time-header-fixed {
+                height: 81px;
+            }
+        }

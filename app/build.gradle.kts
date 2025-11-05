@@ -59,5 +59,5 @@ dependencies {
     implementation("io.github.kevinnzou:compose-webview-multiplatform:2.0.3")
 
     // Gson for JSON parsing
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 }

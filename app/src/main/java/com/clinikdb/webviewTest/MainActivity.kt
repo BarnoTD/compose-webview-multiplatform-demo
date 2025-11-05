@@ -149,48 +149,64 @@ object DummyData {
         )
     )
 
-    val appointments = mutableListOf(
-        Appointment(
-            id = "1001",
-            title = "John Smith",
-            notes = "Regular checkup",
-            from = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 9)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-            }.timeInMillis / 1000,
-            duration_minutes = 60,
-            patient_id = "1",
-            type = "Patient"
-        ),
-        Appointment(
-            id = "1002",
-            title = "Sarah Johnson",
-            notes = "Follow-up consultation",
-            from = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 11)
-                set(Calendar.MINUTE, 30)
-                set(Calendar.SECOND, 0)
-            }.timeInMillis / 1000,
-            duration_minutes = 30,
-            patient_id = "2",
-            type = "Patient"
-        ),
-        Appointment(
-            id = "1003",
-            title = "Team Meeting",
-            notes = "Weekly team sync",
-            from = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 14)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-            }.timeInMillis / 1000,
-            duration_minutes = 45,
-            patient_id = "",
-            type = "Other"
+    val appointments = mutableListOf<Appointment>().apply {
+        val titles = listOf(
+            "John Smith", "Sarah Johnson", "Michael Brown", "Emily Davis", "David Wilson",
+            "Lisa Anderson", "James Anderson", "Olivia Martinez", "Daniel Thomas", "Emma Jackson",
+            "Liam White", "Isabella Harris", "Ethan Lewis", "Mia Clark", "Noah Hall",
+            "Ava Allen", "Lucas Young", "Charlotte King", "Mason Wright", "Amelia Scott",
+            "Elijah Green", "Harper Adams", "Logan Baker", "Abigail Nelson", "Jacob Carter",
+            "Ella Mitchell", "William Perez", "Grace Roberts", "Benjamin Turner", "Chloe Phillips"
         )
-    )
+
+        val notes = listOf("Regular checkup", "Follow-up", "Consultation", "Therapy session", "Routine visit")
+
+        val random = java.util.Random()
+        var idCounter = 1001
+
+        for (dayOffset in 0..2) {
+            val day = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, dayOffset)
+                set(Calendar.HOUR_OF_DAY, 8)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+            }
+
+            // Start each day at 8:00 AM
+            var currentStart = day.clone() as Calendar
+
+            for (i in 0 until 10) {
+                val duration = listOf(30, 45, 60).random()
+                val note = notes.random()
+                val title = titles[i + (dayOffset * 10)]
+                val patientId = if (random.nextBoolean()) (1..6).random().toString() else ""
+                val type = if (patientId.isEmpty()) "Other" else "Patient"
+
+                val from = currentStart.timeInMillis / 1000
+
+                add(
+                    Appointment(
+                        id = (idCounter++).toString(),
+                        title = title,
+                        notes = note,
+                        from = from,
+                        duration_minutes = duration,
+                        patient_id = patientId,
+                        type = type
+                    )
+                )
+
+                // Move start time forward by duration + random gap (10–30 minutes)
+                currentStart.add(Calendar.MINUTE, duration + (10..30).random())
+
+                // Stop adding if we go past 18:00 (6 PM)
+                if (currentStart.get(Calendar.HOUR_OF_DAY) >= 18) break
+            }
+        }
+    }
 }
+
+
 
 // Message Handlers
 class GetDoctorHandler : IJsMessageHandler {
