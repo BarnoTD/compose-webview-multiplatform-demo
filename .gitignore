@@ -1,0 +1,76 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Gradle files
+.gradle/
+build/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration
+local.properties
+*.iml
+.gradle/
+.idea/
+.DS_Store
+
+# Log files
+*.log
+
+# Android Studio specific
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# Keystore files (DO NOT share your keys)
+*.jks
+*.keystore
+*.pem
+
+# Google Services (contains API keys)
+google-services.json
+app/google-services.json
+
+# Firebase crashlytics
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# Android profiling files
+captures/
+.output.json
+
+# Gradle caches
+.gradle/
+**/.gradle/
+
+# Kotlin specific
+*.kotlin_module
+
+# Jetpack Compose
+/.idea/deploymentTargetDropDown.xml
+
+# NDK
+obj/
+
+# Ignore generated files
+gen/
+out/
+
+# Ignore temporary files
+*.swp
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Ignore external native build folders
+.externalNativeBuild
+
+# Misc
+.idea/misc.xml

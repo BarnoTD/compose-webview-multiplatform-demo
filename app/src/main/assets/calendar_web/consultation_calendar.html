@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultation Calendar</title>
+    <link rel="stylesheet" href="choices/choices.min.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="choices/choices.min.js"></script>
+    <script src="api.js"></script>
+    <!-- <script src="api_android.js"></script> -->
+     <!-- <script src="api_ios.js"></script> -->
+
+
+</head>
+<body>
+    <div class="header">
+        <h1 id="headerTitle">📅 Consultation Calendar</h1>
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+        </div>
+        
+        <!-- Modern Calendar Control Panel -->
+        <div class="calendar-control-panel">
+            <div class="control-group">
+                <div class="view-toggle">
+                    <button class="view-button" id="monthViewBtn">Month</button>
+                    <button class="view-button active" id="weekViewBtn">Week</button>
+                    <button class="view-button" id="dayViewBtn">Day</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="navigation-controls">
+                    <button class="nav-button arrow" id="prevBtn">←</button>
+                    <button class="nav-button today" id="todayBtn">Today</button>
+                    <button class="nav-button arrow" id="nextBtn">→</button>
+                    <button class="nav-button jump" id="jumpToWeekBtn">Jump to Date</button>
+                </div>
+            </div>
+            
+            <div class="date-range" id="dateRange"></div>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="week-view-wrapper" id="weekViewWrapper">
+            <div class="time-column-fixed" id="timeColumnFixed">
+                <div class="time-header-fixed" id="timeHeaderFixed"></div>
+                <div class="time-body-fixed" id="timeBodyFixed"></div>
+            </div>
+            <div class="calendar-grid-scrollable" id="calendarGridScrollable">
+                <div class="calendar-header" id="calendarHeader"></div>
+                <div class="calendar-body" id="calendarBody"></div>
+            </div>
+        </div>
+
+        <div class="month-view" id="monthView">
+            <div class="month-view-header">
+                <div class="month-view-title" id="monthViewTitle"></div>
+                <div class="month-view-nav">
+                    <button id="prevMonthBtn">←</button>
+                    <button id="todayMonthBtn">Today</button>
+                    <button id="jumpToDateMonthBtn">Jump to Date</button>
+                    <button id="nextMonthBtn">→</button>
+                </div>
+            </div>
+            <div class="month-grid" id="monthGrid"></div>
+        </div>
+
+        <div class="day-selector" id="daySelector">
+            <div class="day-selector-header">
+                <h3>Select Date</h3>
+                <div class="day-selector-nav">
+                    <button id="todayDayBtn">Today</button>
+                    <button class="jump-to-date-btn" id="jumpToDateBtn">Jump to Date</button>
+                </div>
+            </div>
+            <div class="day-selector-scroll">
+                <div class="day-selector-list" id="daySelectorList"></div>
+            </div>
+        </div>
+
+        <div class="day-view" id="dayView">
+            <div class="day-view-header" id="dayViewHeader">
+                <div class="day-view-header-left">
+                    <div class="day-view-header-content">
+                        <h2></h2>
+                        <p></p>
+                        <div class="day-appointment-count" id="appointmentCount">0 appointments</div>
+                    </div>
+                </div>
+            </div>
+            <div class="day-view-grid" id="dayViewGrid">
+                <div class="day-view-time-column" id="dayViewTimeColumn"></div>
+                <div class="day-view-day-column" id="dayViewDayColumn"></div>
+            </div>
+            <div class="day-view-list" id="dayViewList"></div>
+            <div class="no-appointments-message" id="noAppointmentsMessage">No appointments for this day.</div>
+            <button class="btn btn-primary add-appointment-btn" id="addAppointmentDayViewBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                    <path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                </svg>
+                <span>Add</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal" id="consultationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">New Consultation</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <form id="consultationForm">
+                <div class="form-group">
+                    <label>Patient</label>
+                    <select id="patientSelect" required>
+                        <option value="">Select a patient</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="consultationDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Time</label>
+                    <div class="time-row">
+                        <input type="time" id="startTime" required>
+                        <input type="time" id="endTime" required readonly>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Duration (minutes)</label>
+                    <input type="range" id="durationSlider" class="duration-slider" 
+                           min="15" max="180" step="15" value="60">
+                    <div class="duration-value" id="durationValue">60 min</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes (optional)</label>
+                    <input type="text" id="consultationNotes" placeholder="Add notes...">
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="deleteBtn" style="display: none;">Delete</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <span id="saveBtnText">Save</span>
+                        <span class="loading" id="saveBtnLoading" style="display: none;"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="jumpToDateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Jump to Date</h2>
+                <button class="close-btn" id="closeJumpModal">&times;</button>
+            </div>
+            
+            <div class="calendar-picker" id="calendarPicker">
+                <div class="calendar-picker-header">
+                    <div class="calendar-picker-nav">
+                        <button id="prevPickerMonthBtn">‹</button>
+                        <button id="nextPickerMonthBtn">›</button>
+                    </div>
+                    <div class="calendar-picker-title" id="calendarPickerTitle"></div>
+                </div>
+                <div class="calendar-picker-grid" id="calendarPickerGrid"></div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn btn-secondary" id="cancelJumpBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmJumpBtn">Go to Date</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+ 
+
+        // ==================== CALENDAR SECTION ====================
+        // This section contains the calendar logic
+
+        let currentWeekStart = new Date();
+        let currentMonthView = new Date();
+        let currentDayView = new Date();
+        let appointments = [];
+        let currentEvent = null;
+        let currentView = 'week';
+        let dayViewDates = [];
+        let selectedJumpDate = null;
+        let currentPickerMonth = new Date();
+        let currentDoctor = null;
+        let dayViewAppointments = [];
+        let isChangingDay = false; // Flag to prevent infinite scroll loops
+        let previousView = 'week'; // Track previous view for easy navigation back
+        let patientChoices = null;
+        const HOURS = Array.from({length: 14}, (_, i) => i + 7);
+        const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Initialize the calendar
+        document.addEventListener('DOMContentLoaded', function() {
+               
+        setTimeout(() => {
+            initializeApp();
+       
+        }, 1000);
+
+   
+        });
+
+        async function initializeApp() {
+            // Get doctor information and update header
+            await loadDoctorInfo();
+            
+            // Load patients
+            await loadPatients();
+            
+            // Initialize calendar
+            setWeekStart(new Date());
+            currentMonthView = new Date();
+            currentDayView = new Date();
+            setupEventListeners();
+            adjustViewHeight();
+            window.addEventListener('resize', adjustViewHeight);
+            
+            // Load initial appointments
+            await loadAppointments();
+        }
+
+        async function loadDoctorInfo() {
+            try {
+                currentDoctor = await API.getDoctor();
+                updateHeaderTitle();
+            } catch (error) {
+                console.error('Error loading doctor info:', error);
+                // Fallback to default title
+                currentDoctor = { name: 'Doctor' };
+                updateHeaderTitle();
+            }
+        }
+
+        function updateHeaderTitle() {
+            const headerTitle = document.getElementById('headerTitle');
+            if (currentDoctor && currentDoctor.name) {
+                headerTitle.textContent = `📅 ${currentDoctor.name}'s Consultation Calendar`;
+            } else {
+                headerTitle.textContent = '📅 Consultation Calendar';
+            }
+        }
+
+        async function loadPatients() {
+    try {
+        const patients = await API.queryPatient('');
+        const patientSelect = document.getElementById('patientSelect');
+
+        // If Choices instance exists, destroy it
+        if (patientChoices) {
+            patientChoices.destroy();
+        }
+
+        // Clear existing options except the first one
+        while (patientSelect.children.length > 1) {
+            patientSelect.removeChild(patientSelect.lastChild);
+        }
+
+        // Add patients to select
+        patients.forEach(patient => {
+            const option = document.createElement('option');
+            option.value = patient.id;
+            option.textContent = patient.name;
+            option.dataset.color = getPatientColor(patient.id);
+            patientSelect.appendChild(option);
+        });
+
+        // Initialize Choices.js
+        patientChoices = new Choices(patientSelect, {
+            searchEnabled: true,
+        });
+    } catch (error) {
+        console.error('Error loading patients:', error);
+    }
+}
+
+        async function loadAppointments() {
+            try {
+                let from, to;
+                
+                if (currentView === 'month') {
+                    // Load entire month
+                    const firstDay = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth(), 1);
+                    const lastDay = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 0);
+                    from = Math.floor(firstDay.getTime() / 1000);
+                    to = Math.floor(lastDay.getTime() / 1000);
+                } else {
+                    // Load current week
+                    from = Math.floor(currentWeekStart.getTime() / 1000);
+                    to = Math.floor(new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000).getTime() / 1000);
+                }
+                
+                appointments = await API.selectDate(from, to);
+                renderCalendar();
+            } catch (error) {
+                console.error('Error loading appointments:', error);
+            }
+        }
+
+        function getPatientColor(patientId) {
+            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+            const index = parseInt(patientId) % colors.length;
+            return colors[index];
+        }
+
+        function adjustViewHeight() {
+            const header = document.querySelector('.header');
+            const calendarContainer = document.querySelector('.calendar-container');
+            const daySelector = document.getElementById('daySelector');
+            
+            if (!header || !calendarContainer) return;
+
+            const headerHeight = header.offsetHeight;
+            
+            const containerStyle = window.getComputedStyle(calendarContainer);
+            const containerPadding = parseInt(containerStyle.paddingTop) + parseInt(containerStyle.paddingBottom);
+
+            let daySelectorHeight = 0;
+            if (currentView === 'day' && window.getComputedStyle(daySelector).display !== 'none') {
+                const daySelectorStyle = window.getComputedStyle(daySelector);
+                daySelectorHeight = daySelector.offsetHeight + parseInt(daySelectorStyle.marginBottom);
+            }
+
+            const availableHeight = window.innerHeight - headerHeight - containerPadding - daySelectorHeight;
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            const monthView = document.getElementById('monthView');
+            const dayView = document.getElementById('dayView');
+            
+            if (calendarGrid) calendarGrid.style.maxHeight = `${availableHeight}px`;
+            if (monthView) monthView.style.maxHeight = `${availableHeight}px`;
+            if (dayView) dayView.style.maxHeight = `${availableHeight}px`;
+        }
+
+        function setWeekStart(date) {
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            currentWeekStart = new Date(date.setDate(diff));
+            currentWeekStart.setHours(0, 0, 0, 0);
+            renderCalendar();
+            updateDateRange();
+            scrollToToday();
+        }
+
+        function setMonthStart(date) {
+            currentMonthView = new Date(date.getFullYear(), date.getMonth(), 1);
+            renderCalendar();
+            updateDateRange();
+        }
+
+        function changeDay(days) {
+            currentDayView.setDate(currentDayView.getDate() + days);
+            renderCalendar();
+            updateDateRange();
+        }
+
+        function scrollToToday() {
+            setTimeout(() => {
+                const calendarGridScrollable = document.getElementById('calendarGridScrollable');
+                const today = new Date();
+                const todayDay = Math.floor((today - currentWeekStart) / (1000 * 60 * 60 * 24));
+
+                if (todayDay >= 0 && todayDay < 7) {
+                    if (window.innerWidth < 768) {
+                        // Mobile view: scroll to today's column
+                        const dayWidth = 120; // As set in CSS
+                        calendarGridScrollable.scrollLeft = (todayDay * dayWidth) - (calendarGridScrollable.clientWidth / 2) + (dayWidth / 2);
+                    } else {
+                        // Desktop view: existing logic
+                        const timeColumnWidth = 60; // Still relevant for desktop calculation
+                        const gridWidth = calendarGridScrollable.clientWidth;
+                        const dayWidth = (gridWidth - timeColumnWidth) / 7;
+                        const scrollPosition = (todayDay * dayWidth) - (gridWidth / 2) + (dayWidth / 2);
+                        calendarGridScrollable.scrollLeft = Math.max(0, scrollPosition);
+                    }
+                }
+            }, 100);
+        }
+
+        function renderCalendar() {
+            if (currentView === 'month') {
+                renderMonthView();
+            } else if (currentView === 'week') {
+                renderHeader();
+                renderBody();
+                renderEvents();
+            } else {
+                renderDaySelector();
+                renderDayView();
+            }
+        }
+
+        function renderMonthView() {
+            const title = document.getElementById('monthViewTitle');
+            title.textContent = currentMonthView.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            const grid = document.getElementById('monthGrid');
+            grid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'month-day-header';
+                dayHeader.textContent = day;
+                grid.appendChild(dayHeader);
+            });
+            
+            // Get first day of month and days in month
+            const firstDay = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth(), 1);
+            const lastDay = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // Get previous month's last days to fill the grid
+            const prevMonthLastDay = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth(), 0).getDate();
+            const startDay = firstDay.getDay();
+            
+            // Add previous month's trailing days
+            for (let i = startDay - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'month-day other-month';
+                day.textContent = prevMonthLastDay - i;
+                grid.appendChild(day);
+            }
+            
+            // Add current month's days
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth(), i);
+                date.setHours(0, 0, 0, 0);
+                
+                const day = document.createElement('div');
+                day.className = 'month-day';
+                if (date.toDateString() === today.toDateString()) {
+                    day.classList.add('today');
+                }
+                
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'month-day-number';
+                dayNumber.textContent = i;
+                day.appendChild(dayNumber);
+                
+                // Count appointments for this day
+                const dayAppointments = appointments.filter(apt => {
+                    const aptDate = new Date(apt.from * 1000);
+                    return aptDate.toDateString() === date.toDateString();
+                });
+                
+                // Add appointment count badge
+                if (dayAppointments.length > 0) {
+                    const appointmentCount = document.createElement('div');
+                    appointmentCount.className = 'month-appointment-count';
+                    appointmentCount.textContent = dayAppointments.length;
+                    day.appendChild(appointmentCount);
+                }
+                
+                // Add click event to switch to day view
+                day.addEventListener('click', function() {
+                    currentDayView = new Date(date);
+                    previousView = 'month';
+                    switchToDayView();
+                });
+                
+                grid.appendChild(day);
+            }
+            
+            // Add next month's leading days to fill the grid
+            const remainingDays = (7 - (daysInMonth % 7)) % 7;
+            for (let i = 1; i <= remainingDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'month-day other-month';
+                day.textContent = i;
+                grid.appendChild(day);
+            }
+        }
+
+        function switchToDayView() {
+            currentView = 'day';
+            document.getElementById('dayViewBtn').classList.add('active');
+            document.getElementById('weekViewBtn').classList.remove('active');
+            document.getElementById('monthViewBtn').classList.remove('active');
+            document.getElementById('weekViewWrapper').style.display = 'none';
+            document.getElementById('monthView').style.display = 'none';
+            document.getElementById('dayView').style.display = 'flex';
+            document.getElementById('daySelector').style.display = 'block';
+            
+            // Update navigation buttons
+            updateNavigationButtons();
+            
+            // Add back button to return to previous view (only for month view)
+            if (previousView === 'month') {
+                const header = document.querySelector('.day-view-header-left');
+                const backButton = document.createElement('button');
+                backButton.id = 'backToPreviousView';
+                backButton.className = 'back-icon';
+                backButton.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>';
+                
+                // Remove existing back button if any
+                const existingBackButton = document.getElementById('backToPreviousView');
+                if (existingBackButton) {
+                    existingBackButton.remove();
+                }
+                
+                header.insertBefore(backButton, header.firstChild);
+                
+                // Add event listener to back button
+                backButton.addEventListener('click', function() {
+                    switchToMonthView();
+                });
+            } else {
+                // Remove back button if coming from week view
+                const backButton = document.getElementById('backToPreviousView');
+                if (backButton) {
+                    backButton.remove();
+                }
+            }
+            
+            adjustViewHeight();
+            renderCalendar();
+            updateDateRange();
+            loadDayViewEvents();
+        }
+
+        function switchToMonthView() {
+            currentView = 'month';
+            document.getElementById('monthViewBtn').classList.add('active');
+            document.getElementById('weekViewBtn').classList.remove('active');
+            document.getElementById('dayViewBtn').classList.remove('active');
+            document.getElementById('weekViewWrapper').style.display = 'none';
+            document.getElementById('monthView').style.display = 'block';
+            document.getElementById('dayView').style.display = 'none';
+            document.getElementById('daySelector').style.display = 'none';
+            
+            // Update navigation buttons
+            updateNavigationButtons();
+            
+            // Remove back button
+            const backButton = document.getElementById('backToPreviousView');
+            if (backButton) {
+                backButton.remove();
+            }
+            
+            adjustViewHeight();
+            loadAppointments();
+            updateDateRange();
+        }
+
+        function switchToWeekView() {
+            currentView = 'week';
+            document.getElementById('weekViewBtn').classList.add('active');
+            document.getElementById('monthViewBtn').classList.remove('active');
+            document.getElementById('dayViewBtn').classList.remove('active');
+            document.getElementById('weekViewWrapper').style.display = 'flex';
+            document.getElementById('monthView').style.display = 'none';
+            document.getElementById('dayView').style.display = 'none';
+            document.getElementById('daySelector').style.display = 'none';
+            
+            // Update navigation buttons
+            updateNavigationButtons();
+            
+            // Remove back button
+            const backButton = document.getElementById('backToPreviousView');
+            if (backButton) {
+                backButton.remove();
+            }
+            
+            adjustViewHeight();
+            loadAppointments();
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const todayBtn = document.getElementById('todayBtn');
+            const jumpToWeekBtn = document.getElementById('jumpToWeekBtn');
+            
+            if (currentView === 'week') {
+                // Show all navigation buttons in week view
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+                todayBtn.style.display = 'flex';
+                jumpToWeekBtn.style.display = 'flex';
+            } else if (currentView === 'month') {
+                // Show only prev/next/today in month view (no jump button)
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+                todayBtn.style.display = 'flex';
+                jumpToWeekBtn.style.display = 'none';
+            } else {
+                // Hide all navigation buttons in day view
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+                todayBtn.style.display = 'none';
+                jumpToWeekBtn.style.display = 'none';
+            }
+        }
+
+        function renderHeader() {
+            const calendarHeader = document.getElementById('calendarHeader');
+            calendarHeader.innerHTML = '';
+            
+            const dayHeaders = document.createElement('div');
+            dayHeaders.className = 'day-headers';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + i);
+                const dayName = DAYS[date.getDay()];
+                const dayNum = date.getDate();
+                const isToday = date.toDateString() === today.toDateString();
+                
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                if (isToday) {
+                    dayHeader.style.color = '#3498db';
+                    dayHeader.style.fontWeight = '700';
+                    dayHeader.style.background = '#e3f2fd';
+                }
+                dayHeader.innerHTML = `${dayName}<br>${dayNum}`;
+                dayHeaders.appendChild(dayHeader);
+            }
+            
+            calendarHeader.appendChild(dayHeaders);
+
+            renderFixedTimeHeader();
+        }
+
+        function renderFixedTimeHeader() {
+            const timeHeaderFixed = document.getElementById('timeHeaderFixed');
+            timeHeaderFixed.innerHTML = '';
+
+            const timeHeader = document.createElement('div');
+            timeHeader.className = 'time-header';
+            timeHeaderFixed.appendChild(timeHeader);
+        }
+
+        function renderBody() {
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+            
+            const daysColumn = document.createElement('div');
+            daysColumn.className = 'days-column';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let day = 0; day < 7; day++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + day);
+                const isToday = date.toDateString() === today.toDateString();
+                
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                
+                HOURS.forEach(hour => {
+                    const cell = document.createElement('div');
+                    cell.className = 'calendar-cell';
+                    cell.dataset.day = day;
+                    cell.dataset.hour = hour;
+                    
+                    if (isToday) {
+                        cell.style.background = '#f0f8ff';
+                    }
+                    
+                    cell.addEventListener('click', function(e) {
+                        if (e.target === cell) {
+                            openModal(day, hour);
+                        }
+                    });
+                    
+                    dayColumn.appendChild(cell);
+                });
+                
+                daysColumn.appendChild(dayColumn);
+            }
+            
+            calendarBody.appendChild(daysColumn);
+
+            renderFixedTimeBody();
+        }
+
+        function renderFixedTimeBody() {
+            const timeBodyFixed = document.getElementById('timeBodyFixed');
+            timeBodyFixed.innerHTML = '';
+
+            const timeColumn = document.createElement('div');
+            timeColumn.className = 'time-column';
+            
+            HOURS.forEach(hour => {
+                const timeLabel = document.createElement('div');
+                timeLabel.className = 'time-label';
+                timeLabel.textContent = formatShortTime(hour);
+                timeColumn.appendChild(timeLabel);
+            });
+            
+            timeBodyFixed.appendChild(timeColumn);
+        }
+
+        function renderEvents() {
+            document.querySelectorAll('.event').forEach(el => el.remove());
+            
+            appointments.forEach(appointment => {
+                const eventDate = new Date(appointment.from * 1000);
+                const eventDay = Math.floor((eventDate - currentWeekStart) / (1000 * 60 * 60 * 24));
+                
+                if (eventDay >= 0 && eventDay < 7) {
+                    const hour = eventDate.getHours();
+                    const minutes = eventDate.getMinutes();
+                    const duration = appointment.duration_minutes;
+                    
+                    const dayColumns = document.querySelectorAll('.day-column');
+                    const dayColumn = dayColumns[eventDay];
+                    if (dayColumn) {
+                        const cells = dayColumn.querySelectorAll('.calendar-cell');
+                        const cell = cells[hour - 7];
+                        if (cell) {
+                            const event = document.createElement('div');
+                            event.className = 'event';
+                            event.style.backgroundColor = appointment.patient_id ? getPatientColor(appointment.patient_id) : '#95a5a6';
+                            event.style.top = `${(minutes / 60) * 100}%`;
+                            event.style.height = `${(duration / 60) * 100}%`;
+                            event.textContent = appointment.title;
+                            event.dataset.id = appointment.id;
+                            
+                            event.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                editAppointment(appointment);
+                            });
+                            
+                            cell.appendChild(event);
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderDaySelector() {
+            const daySelectorList = document.getElementById('daySelectorList');
+            daySelectorList.innerHTML = '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            dayViewDates = [];
+            for (let i = -30; i <= 29; i++) {
+                const date = new Date(currentDayView);
+                date.setDate(date.getDate() + i);
+                dayViewDates.push(new Date(date));
+            }
+            
+            let activeItem = null;
+            
+            dayViewDates.forEach((date, index) => {
+                const dayName = DAYS[date.getDay()];
+                const dayNum = date.getDate();
+                const isSelected = date.toDateString() === currentDayView.toDateString();
+                const isToday = date.toDateString() === today.toDateString();
+                const showMonth = date.getDate() === 1 || (index === 0);
+                
+                const dayItem = document.createElement('div');
+                dayItem.className = 'day-selector-item';
+                if (isSelected) {
+                    dayItem.classList.add('active');
+                    activeItem = dayItem;
+                }
+                dayItem.dataset.index = index;
+                dayItem.dataset.date = date.toDateString();
+                
+                let monthIndicator = '';
+                if (showMonth) {
+                    const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                    monthIndicator = `<div class="month-indicator">${monthName}</div>`;
+                }
+                
+                dayItem.innerHTML = `
+                    <div class="day-name">${isToday ? 'Today' : dayName}</div>
+                    <div class="day-number">${dayNum}</div>
+                    ${monthIndicator}
+                `;
+                
+                dayItem.addEventListener('click', function() {
+                    currentDayView = new Date(date);
+                    renderDaySelector();
+                    renderDayView();
+                    updateDateRange();
+                });
+                
+                daySelectorList.appendChild(dayItem);
+            });
+
+            if (activeItem) {
+                setTimeout(() => {
+                    activeItem.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }, 50);
+            }
+        }
+
+        async function renderDayView() {
+            const header = document.getElementById('dayViewHeader');
+            const timeColumn = document.getElementById('dayViewTimeColumn');
+            const dayColumn = document.getElementById('dayViewDayColumn');
+            
+            // Update header with three-line format
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isToday = currentDayView.toDateString() === today.toDateString();
+            const dayName = DAYS[currentDayView.getDay()];
+            const dayNum = currentDayView.getDate();
+            const month = currentDayView.toLocaleDateString('en-US', { month: 'short' });
+            const year = currentDayView.getFullYear();
+            
+            // Line 1: Day name
+            header.querySelector('h2').textContent = isToday ? 'Today' : dayName;
+            
+            // Line 2: Date
+            header.querySelector('p').textContent = `${month} ${dayNum}, ${year}`;
+            
+            if (window.innerWidth > 767) {
+                // Clear and rebuild time column
+                timeColumn.innerHTML = '';
+                HOURS.forEach(hour => {
+                    const timeLabel = document.createElement('div');
+                    timeLabel.className = 'time-label';
+                    timeLabel.textContent = formatShortTime(hour);
+                    timeColumn.appendChild(timeLabel);
+                });
+                
+                // Clear and rebuild day column
+                dayColumn.innerHTML = '';
+                HOURS.forEach(hour => {
+                    const cell = document.createElement('div');
+                    cell.className = 'day-view-cell';
+                    cell.dataset.hour = hour;
+                    
+                    if (isToday) {
+                        cell.style.background = 'var(--month-day-today-bg)';
+                    }
+                    
+                    cell.addEventListener('click', function(e) {
+                        if (e.target === cell) {
+                            openDayViewModal(hour);
+                        }
+                    });
+                    
+                    dayColumn.appendChild(cell);
+                });
+            }
+            
+            // Load and render events for the current day
+            await loadDayViewEvents();
+        }
+
+        async function loadDayViewEvents() {
+            try {
+                const from = Math.floor(currentDayView.setHours(0, 0, 0, 0) / 1000);
+                const to = Math.floor(currentDayView.setHours(23, 59, 59, 999) / 1000);
+                
+                dayViewAppointments = await API.selectDate(from, to);
+                
+                // Update appointment count (Line 3)
+                const appointmentCount = document.getElementById('appointmentCount');
+                appointmentCount.textContent = `${dayViewAppointments.length} appointment${dayViewAppointments.length !== 1 ? 's' : ''}`;
+                
+                if (window.innerWidth <= 767) {
+                    renderDayViewList(dayViewAppointments);
+                } else {
+                    // Remove existing events
+                    document.querySelectorAll('#dayViewDayColumn .event').forEach(el => el.remove());
+                    
+                    dayViewAppointments.forEach(appointment => {
+                        const eventDate = new Date(appointment.from * 1000);
+                        const hour = eventDate.getHours();
+                        const minutes = eventDate.getMinutes();
+                        const duration = appointment.duration_minutes;
+                        
+                        if (hour >= 7 && hour < 21) {
+                            const cells = document.querySelectorAll('#dayViewDayColumn .day-view-cell');
+                            const cellIndex = hour - 7;
+                            const cell = cells[cellIndex];
+                            
+                            if (cell) {
+                                const event = document.createElement('div');
+                                event.className = 'event';
+                                event.style.backgroundColor = appointment.patient_id ? getPatientColor(appointment.patient_id) : '#95a5a6';
+                                event.style.top = `${(minutes / 60) * 100}%`;
+                                event.style.height = `${(duration / 60) * 100}%`;
+                                event.textContent = appointment.title;
+                                event.dataset.id = appointment.id;
+                                
+                                event.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    editAppointment(appointment);
+                                });
+                                
+                                cell.appendChild(event);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading day view events:', error);
+            }
+        }
+
+        function renderDayViewList(appointments) {
+            const dayViewList = document.getElementById('dayViewList');
+            const noAppointmentsMessage = document.getElementById('noAppointmentsMessage');
+            dayViewList.innerHTML = '';
+
+            if (appointments.length === 0) {
+                noAppointmentsMessage.style.display = 'block';
+                dayViewList.style.display = 'none';
+            } else {
+                noAppointmentsMessage.style.display = 'none';
+                dayViewList.style.display = 'block';
+                appointments.sort((a, b) => a.from - b.from);
+                appointments.forEach(appointment => {
+                    const item = document.createElement('div');
+                    item.className = 'day-view-list-item';
+                    const startTime = new Date(appointment.from * 1000);
+                    const endTime = new Date(startTime.getTime() + appointment.duration_minutes * 60000);
+                    
+                    item.style.borderLeftColor = appointment.patient_id ? getPatientColor(appointment.patient_id) : '#95a5a6';
+
+                    item.innerHTML = `
+                        <div class="day-view-list-item-header">
+                            <div class="day-view-list-item-time">${formatTime(startTime)} - ${formatTime(endTime)}</div>
+                            <div class="day-view-list-item-duration">${appointment.duration_minutes} min</div>
+                        </div>
+                        <div class="day-view-list-item-title">${appointment.title}</div>
+                        ${appointment.notes ? `<div class="day-view-list-item-notes">${appointment.notes}</div>` : ''}
+                    `;
+                    item.addEventListener('click', () => editAppointment(appointment));
+                    dayViewList.appendChild(item);
+                });
+            }
+        }
+
+        function editAppointmentById(id) {
+            const appointment = appointments.find(a => a.id == id);
+            if (appointment) {
+                editAppointment(appointment);
+            }
+        }
+
+        function setupEventListeners() {
+            // View toggle buttons
+            document.getElementById('monthViewBtn').addEventListener('click', () => {
+                switchToMonthView();
+            });
+
+            document.getElementById('weekViewBtn').addEventListener('click', () => {
+                switchToWeekView();
+            });
+
+            document.getElementById('dayViewBtn').addEventListener('click', () => {
+                previousView = 'week';
+                currentDayView = new Date();
+                switchToDayView();
+            });
+
+            // Navigation buttons
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (currentView === 'month') {
+                    currentMonthView.setMonth(currentMonthView.getMonth() - 1);
+                    renderCalendar();
+                    updateDateRange();
+                } else if (currentView === 'week') {
+                    const newDate = new Date(currentWeekStart);
+                    newDate.setDate(newDate.getDate() - 7);
+                    setWeekStart(newDate);
+                    loadAppointments();
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                if (currentView === 'month') {
+                    currentMonthView.setMonth(currentMonthView.getMonth() + 1);
+                    renderCalendar();
+                    updateDateRange();
+                } else if (currentView === 'week') {
+                    const newDate = new Date(currentWeekStart);
+                    newDate.setDate(newDate.getDate() + 7);
+                    setWeekStart(newDate);
+                    loadAppointments();
+                }
+            });
+
+            document.getElementById('todayBtn').addEventListener('click', () => {
+                if (currentView === 'month') {
+                    currentMonthView = new Date();
+                    renderCalendar();
+                    updateDateRange();
+                } else if (currentView === 'week') {
+                    setWeekStart(new Date());
+                    loadAppointments();
+                } else {
+                    currentDayView = new Date();
+                    renderDaySelector();
+                    renderDayView();
+                    updateDateRange();
+                }
+            });
+
+            // Month view navigation
+            document.getElementById('prevMonthBtn').addEventListener('click', () => {
+                currentMonthView.setMonth(currentMonthView.getMonth() - 1);
+                renderCalendar();
+                updateDateRange();
+            });
+
+            document.getElementById('nextMonthBtn').addEventListener('click', () => {
+                currentMonthView.setMonth(currentMonthView.getMonth() + 1);
+                renderCalendar();
+                updateDateRange();
+            });
+
+            document.getElementById('todayMonthBtn').addEventListener('click', () => {
+                currentMonthView = new Date();
+                renderCalendar();
+                updateDateRange();
+            });
+
+            document.getElementById('jumpToDateMonthBtn').addEventListener('click', () => {
+                openJumpToDateModal();
+            });
+
+            // Jump to date button in week view
+            document.getElementById('jumpToWeekBtn').addEventListener('click', () => {
+                openJumpToDateModal();
+            });
+
+            // Today button in day selector
+            document.getElementById('todayDayBtn').addEventListener('click', () => {
+                currentDayView = new Date();
+                renderDaySelector();
+                renderDayView();
+                updateDateRange();
+            });
+
+            // Add Appointment button in day view
+            document.getElementById('addAppointmentDayViewBtn').addEventListener('click', () => {
+                openDayViewModal(9); // Default to 9 AM
+            });
+
+            const slider = document.getElementById('durationSlider');
+            const startTime = document.getElementById('startTime');
+            
+            slider.addEventListener('input', updateDuration);
+            startTime.addEventListener('change', updateDuration);
+
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('cancelBtn').addEventListener('click', closeModal);
+            
+            document.getElementById('consultationModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeModal();
+                }
+            });
+            
+            document.getElementById('consultationForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveAppointment();
+            });
+
+            document.getElementById('deleteBtn').addEventListener('click', deleteAppointment);
+
+            document.getElementById('jumpToDateBtn').addEventListener('click', openJumpToDateModal);
+            document.getElementById('closeJumpModal').addEventListener('click', closeJumpToDateModal);
+            document.getElementById('cancelJumpBtn').addEventListener('click', closeJumpToDateModal);
+            
+            document.getElementById('jumpToDateModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeJumpToDateModal();
+                }
+            });
+            
+            document.getElementById('confirmJumpBtn').addEventListener('click', jumpToSelectedDate);
+            
+            document.getElementById('prevPickerMonthBtn').addEventListener('click', () => {
+                currentPickerMonth.setMonth(currentPickerMonth.getMonth() - 1);
+                renderCalendarPicker();
+            });
+            
+            document.getElementById('nextPickerMonthBtn').addEventListener('click', () => {
+                currentPickerMonth.setMonth(currentPickerMonth.getMonth() + 1);
+                renderCalendarPicker();
+            });
+
+            // Fixed scroll event listener for day view
+            const dayViewGrid = document.getElementById('dayViewGrid');
+            let lastScrollTop = 0;
+            let scrollTimeout;
+            
+         
+            dayViewGrid.addEventListener('scroll', () => {
+    if (isChangingDay) return;
+
+    const currentScrollTop = dayViewGrid.scrollTop;
+    const scrollDirection = currentScrollTop > lastScrollTop ? 'down' : 'up';
+    lastScrollTop = currentScrollTop;
+
+    clearTimeout(scrollTimeout);
+
+    // debounce scroll event to avoid rapid triggers
+    scrollTimeout = setTimeout(() => {
+        const nearBottom = dayViewGrid.scrollHeight - (dayViewGrid.scrollTop + dayViewGrid.clientHeight) < 5;
+        const nearTop = dayViewGrid.scrollTop < 5;
+
+        if (scrollDirection === 'down' && nearBottom) {
+            changeDay(1, true); // next day
+        } else if (scrollDirection === 'up' && nearTop) {
+            changeDay(-1, false); // previous day
+        }
+    }, 150);
+});
+
+            // Day view swipe for mobile
+            const dayView = document.getElementById('dayView');
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            dayView.addEventListener('touchstart', function(event) {
+                touchStartX = event.changedTouches[0].screenX;
+                touchStartY = event.changedTouches[0].screenY;
+            }, { passive: true });
+
+            dayView.addEventListener('touchend', function(event) {
+                const touchEndX = event.changedTouches[0].screenX;
+                const touchEndY = event.changedTouches[0].screenY;
+                
+                const swipeThreshold = 50; // Minimum distance for a swipe
+                const deltaX = touchEndX - touchStartX;
+                const deltaY = touchEndY - touchStartY;
+
+                // Check if it's a vertical swipe
+                if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > swipeThreshold) {
+                    if (deltaY < 0) {
+                        // Swiped up
+                        changeDay(1);
+                    } else {
+                        // Swiped down
+                        changeDay(-1);
+                    }
+                }
+            }, { passive: true });
+
+const dayViewHeader = document.getElementById('dayViewHeader');
+const daySelector = document.getElementById('daySelector');
+const swipeAreas = [dayViewHeader, daySelector];
+
+swipeAreas.forEach(area => {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
+
+    area.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+        isSwiping = false;
+    }, { passive: true });
+
+    area.addEventListener('touchmove', e => {
+        if (isSwiping) {
+            e.preventDefault();
+            return;
+        }
+
+        const deltaX = Math.abs(e.changedTouches[0].screenX - touchStartX);
+        const deltaY = Math.abs(e.changedTouches[0].screenY - touchStartY);
+
+        if (deltaX > deltaY * 2 && deltaX > 10) {
+            isSwiping = true;
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    area.addEventListener('touchend', e => {
+        if (isSwiping) {
+            const touchEndX = e.changedTouches[0].screenX;
+            const deltaX = touchEndX - touchStartX;
+
+            if (deltaX < -50) {
+                // Swiped left
+                changeDay(1, true);
+            }
+
+            if (deltaX > 50) {
+                // Swiped right
+                changeDay(-1, false);
+            }
+        }
+    });
+
+    let isDragging = false;
+    let dragStartX = 0;
+
+    area.addEventListener('mousedown', e => {
+        isDragging = true;
+        dragStartX = e.screenX;
+        area.style.cursor = 'grabbing';
+    });
+
+    area.addEventListener('mousemove', e => {
+        if (isDragging) {
+            e.preventDefault();
+        }
+    });
+
+    area.addEventListener('mouseup', e => {
+        if (isDragging) {
+            const dragEndX = e.screenX;
+            const deltaX = dragEndX - dragStartX;
+
+            if (deltaX < -50) {
+                // Dragged left
+                changeDay(1, true);
+            }
+
+            if (deltaX > 50) {
+                // Dragged right
+                changeDay(-1, false);
+            }
+        }
+        isDragging = false;
+        area.style.cursor = 'grab';
+    });
+
+    area.addEventListener('mouseleave', () => {
+        if (isDragging) {
+            isDragging = false;
+            area.style.cursor = 'grab';
+        }
+    });
+});
+
+            const timeBodyFixed = document.getElementById('timeBodyFixed');
+            const calendarGridScrollable = document.getElementById('calendarGridScrollable');
+            let isSyncingScroll = false;
+
+            calendarGridScrollable.addEventListener('scroll', () => {
+                if (!isSyncingScroll) {
+                    isSyncingScroll = true;
+                    timeBodyFixed.scrollTop = calendarGridScrollable.scrollTop;
+                    isSyncingScroll = false;
+                }
+            });
+
+            timeBodyFixed.addEventListener('scroll', () => {
+                if (!isSyncingScroll) {
+                    isSyncingScroll = true;
+                    calendarGridScrollable.scrollTop = timeBodyFixed.scrollTop;
+                    isSyncingScroll = false;
+                }
+            });
+
+function changeDay(offset, scrollToTopAfter) {
+    if (isChangingDay) return;
+    isChangingDay = true;
+
+    // update current day
+    currentDayView.setDate(currentDayView.getDate() + offset);
+    renderDaySelector();
+    renderDayView();
+    updateDateRange();
+
+    // wait a tick for DOM to update, then scroll and unlock
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (scrollToTopAfter) {
+                dayViewGrid.scrollTop = 20; // not exactly 0 avoids triggering 'up' immediately
+            } else {
+                dayViewGrid.scrollTop = dayViewGrid.scrollHeight - dayViewGrid.clientHeight - 1;
+            }
+
+            // delay re-enabling scroll listener slightly to avoid re-trigger
+            setTimeout(() => {
+                isChangingDay = false;
+            }, 1000);
+        });
+    });
+}
+        }
+
+        function openJumpToDateModal() {
+            currentPickerMonth = currentView === 'week' ? new Date(currentWeekStart) : new Date(currentDayView);
+            selectedJumpDate = currentView === 'week' ? new Date(currentWeekStart) : new Date(currentDayView);
+            renderCalendarPicker();
+            document.getElementById('jumpToDateModal').classList.add('active');
+        }
+
+        function closeJumpToDateModal() {
+            document.getElementById('jumpToDateModal').classList.remove('active');
+        }
+
+        function renderCalendarPicker() {
+            const title = document.getElementById('calendarPickerTitle');
+            const grid = document.getElementById('calendarPickerGrid');
+            
+            // Set title
+            title.textContent = currentPickerMonth.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            // Clear grid
+            grid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayHeaders.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-picker-day-header';
+                dayHeader.textContent = day;
+                grid.appendChild(dayHeader);
+            });
+            
+            // Get first day of month and days in month
+            const firstDay = new Date(currentPickerMonth.getFullYear(), currentPickerMonth.getMonth(), 1);
+            const lastDay = new Date(currentPickerMonth.getFullYear(), currentPickerMonth.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // Get previous month's last days to fill the grid
+            const prevMonthLastDay = new Date(currentPickerMonth.getFullYear(), currentPickerMonth.getMonth(), 0).getDate();
+            const startDay = firstDay.getDay();
+            
+            // Add previous month's trailing days
+            for (let i = startDay - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-picker-day other-month';
+                day.textContent = prevMonthLastDay - i;
+                grid.appendChild(day);
+            }
+            
+            // Add current month's days
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-picker-day';
+                day.textContent = i;
+                
+                const date = new Date(currentPickerMonth.getFullYear(), currentPickerMonth.getMonth(), i);
+                date.setHours(0, 0, 0, 0);
+                
+                // Check if it's today
+                if (date.toDateString() === today.toDateString()) {
+                    day.classList.add('today');
+                }
+                
+                // Check if it's the selected date
+                if (selectedJumpDate && date.toDateString() === selectedJumpDate.toDateString()) {
+                    day.classList.add('selected');
+                }
+                
+                // Add click event
+                day.addEventListener('click', () => {
+                    selectedJumpDate = new Date(date);
+                    renderCalendarPicker();
+                });
+                
+                grid.appendChild(day);
+            }
+            
+            // Add next month's leading days to fill the grid
+            const totalCells = grid.children.length - 7; // Subtract header row
+            const remainingCells = 35 - totalCells; // 5 rows * 7 days = 35 cells
+            
+            for (let i = 1; i <= remainingCells; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-picker-day other-month';
+                day.textContent = i;
+                grid.appendChild(day);
+            }
+        }
+
+        function jumpToSelectedDate() {
+            if (selectedJumpDate) {
+                if (currentView === 'week') {
+                    // Set the week start to the selected date's week
+                    setWeekStart(new Date(selectedJumpDate));
+                    loadAppointments();
+                } else if (currentView === 'month') {
+                    // Set the month view to the selected date's month
+                    currentMonthView = new Date(selectedJumpDate.getFullYear(), selectedJumpDate.getMonth(), 1);
+                    renderCalendar();
+                    updateDateRange();
+                } else {
+                    // Set the day view to the selected date
+                    currentDayView = new Date(selectedJumpDate);
+                    renderDaySelector();
+                    renderDayView();
+                    updateDateRange();
+                }
+                closeJumpToDateModal();
+            }
+        }
+
+        function openModal(day, hour) {
+            // Ensure jump to date modal is closed
+            closeJumpToDateModal();
+            
+            currentEvent = null;
+            document.getElementById('modalTitle').textContent = 'New Consultation';
+            document.getElementById('deleteBtn').style.display = 'none';
+            
+            const date = new Date(currentWeekStart);
+            date.setDate(date.getDate() + day);
+            date.setHours(hour, 0, 0, 0);
+            
+            document.getElementById('consultationDate').value = date.toISOString().split('T')[0];
+            document.getElementById('startTime').value = `${String(hour).padStart(2, '0')}:00`;
+            patientChoices.setChoiceByValue('');
+            document.getElementById('consultationNotes').value = '';
+            document.getElementById('durationSlider').value = 60;
+            
+            updateDuration();
+            document.getElementById('consultationModal').classList.add('active');
+        }
+
+        function openDayViewModal(hour) {
+            // Ensure jump to date modal is closed
+            closeJumpToDateModal();
+            
+            currentEvent = null;
+            document.getElementById('modalTitle').textContent = 'New Consultation';
+            document.getElementById('deleteBtn').style.display = 'none';
+            
+            const date = new Date(currentDayView);
+            date.setHours(hour, 0, 0, 0);
+            
+            document.getElementById('consultationDate').value = date.toISOString().split('T')[0];
+            document.getElementById('startTime').value = `${String(hour).padStart(2, '0')}:00`;
+            patientChoices.setChoiceByValue('');
+            document.getElementById('consultationNotes').value = '';
+            document.getElementById('durationSlider').value = 60;
+            
+            updateDuration();
+            document.getElementById('consultationModal').classList.add('active');
+        }
+
+        function editAppointment(appointment) {
+            // Ensure jump to date modal is closed
+            closeJumpToDateModal();
+            
+            currentEvent = appointment;
+            document.getElementById('modalTitle').textContent = 'Edit Consultation';
+            document.getElementById('deleteBtn').style.display = 'block';
+            
+            const start = new Date(appointment.from * 1000);
+            const duration = appointment.duration_minutes;
+            
+            document.getElementById('consultationDate').value = start.toISOString().split('T')[0];
+            document.getElementById('startTime').value = formatTime(start);
+            patientChoices.setChoiceByValue(appointment.patient_id || '');
+            document.getElementById('consultationNotes').value = appointment.notes || '';
+            document.getElementById('durationSlider').value = duration;
+            
+            updateDuration();
+            document.getElementById('consultationModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('consultationModal').classList.remove('active');
+            currentEvent = null;
+        }
+
+        function updateDuration() {
+            const duration = parseInt(document.getElementById('durationSlider').value);
+            document.getElementById('durationValue').textContent = duration + ' min';
+            
+            const startTime = document.getElementById('startTime').value;
+            if (startTime) {
+                const [hours, minutes] = startTime.split(':');
+                const start = new Date();
+                start.setHours(parseInt(hours), parseInt(minutes), 0);
+                
+                const end = new Date(start.getTime() + duration * 60000);
+                document.getElementById('endTime').value = formatTime(end);
+            }
+        }
+
+        async function saveAppointment() {
+            const patientSelect = document.getElementById('patientSelect');
+            const patientId = patientSelect.value;
+            console.log('Selected patient ID:', patientChoices.getValue(false));
+            const patientName = patientChoices.getValue(false).label;
+            const date = document.getElementById('consultationDate').value;
+            const startTime = document.getElementById('startTime').value;
+            const duration = parseInt(document.getElementById('durationSlider').value);
+            const notes = document.getElementById('consultationNotes').value;
+
+            if (!date || !startTime) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Show loading state
+            const saveBtn = document.getElementById('saveBtn');
+            const saveBtnText = document.getElementById('saveBtnText');
+            const saveBtnLoading = document.getElementById('saveBtnLoading');
+            
+            saveBtn.disabled = true;
+            saveBtnText.style.display = 'none';
+            saveBtnLoading.style.display = 'inline-block';
+
+            try {
+                const [hours, minutes] = startTime.split(':');
+                const start = new Date(date);
+                start.setHours(parseInt(hours), parseInt(minutes), 0);
+                
+                const from = Math.floor(start.getTime() / 1000);
+
+                const appointmentData = {
+                    title: patientName || 'Other',
+                    notes: notes,
+                    from: from,
+                    duration_minutes: duration,
+                    patient_id: patientId
+                };
+
+                let result;
+                if (currentEvent) {
+                    // Edit existing appointment
+                    result = await API.editAppointment({
+                        appointment_id: currentEvent.id,
+                        ...appointmentData
+                    });
+                } else {
+                    // Save new appointment
+                    result = await API.saveAppointment(appointmentData);
+                }
+
+                if (result.code === 200) {
+                    // Reload appointments
+                    if (currentView === 'month' || currentView === 'week') {
+                        await loadAppointments();
+                    } else {
+                        await renderDayView();
+                    }
+                    closeModal();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error saving appointment:', error);
+                alert('Error saving appointment');
+            } finally {
+                // Hide loading state
+                saveBtn.disabled = false;
+                saveBtnText.style.display = 'inline';
+                saveBtnLoading.style.display = 'none';
+            }
+        }
+
+        async function deleteAppointment() {
+            if (currentEvent && confirm('Are you sure you want to delete this consultation?')) {
+                try {
+                    const result = await API.deleteAppointment(currentEvent.id);
+                    
+                    if (result.code === 200) {
+                        // Reload appointments
+                        if (currentView === 'month' || currentView === 'week') {
+                            await loadAppointments();
+                        } else {
+                            await renderDayView();
+                        }
+                        closeModal();
+                    } else {
+                        alert('Error: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Error deleting appointment:', error);
+                    alert('Error deleting appointment');
+                }
+            }
+        }
+
+        function updateDateRange() {
+            if (currentView === 'month') {
+                const start = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth(), 1);
+                const end = new Date(currentMonthView.getFullYear(), currentMonthView.getMonth() + 1, 0);
+                
+                const range = start.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                }) + ' - ' + end.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                document.getElementById('dateRange').textContent = range;
+            } else if (currentView === 'week') {
+                const start = new Date(currentWeekStart);
+                const end = new Date(currentWeekStart);
+                end.setDate(end.getDate() + 6);
+                
+                const range = start.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                }) + ' - ' + end.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                document.getElementById('dateRange').textContent = range;
+            } else {
+                const range = currentDayView.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                document.getElementById('dateRange').textContent = range;
+            }
+        }
+
+        function formatTime(date) {
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        function formatShortTime(hour) {
+            const period = hour >= 12 ? 'p' : 'a';
+            const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+            return `${displayHour}${period}`;
+        }
+
+        const themeSwitch = document.getElementById('checkbox');
+        const html = document.documentElement;
+
+        function toggleTheme() {
+            if (themeSwitch.checked) {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        themeSwitch.addEventListener('change', toggleTheme);
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            html.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                themeSwitch.checked = true;
+            }
+        }
+    </script>
+</body>
+</html>
