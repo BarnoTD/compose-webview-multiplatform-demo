@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Prescription</title>
+    <!-- DYNAMIC_CSS_VARS -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+
+        .prescription-template {
+            width: 210mm;
+            height: 297mm;
+            min-height: 297mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            page-break-after: always;
+        }
+
+        .template-header {
+            padding: 20px 30px;
+            border-bottom: 2px solid #ecf0f1;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            min-height: var(--header-height);
+            background-color: var(--header-bg-color);
+            color: var(--header-text-color);
+            font-size: var(--header-font-size);
+            flex-shrink: 0;
+        }
+
+        .header-logo {
+            flex-shrink: 0;
+            order: var(--logo-order);
+            margin: var(--logo-margin);
+        }
+
+        .header-logo img {
+            display: block;
+            object-fit: contain;
+            width: var(--header-logo-size);
+            height: var(--header-logo-size);
+        }
+
+        .header-content {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            order: 2;
+            width: 100%;
+        }
+
+        .header-left,
+        .header-right {
+            flex: 1;
+        }
+
+        .header-center {
+            flex: 2;
+            text-align: center;
+        }
+
+        .header-text {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .template-content {
+            flex: 1;
+            padding: var(--content-padding);
+            background-color: var(--content-bg-color);
+            color: var(--content-text-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.05;
+            pointer-events: none;
+            font-size: 150px;
+        }
+
+        .content-label {
+            font-size: 14px;
+            color: #95a5a6;
+            margin-bottom: 20px;
+        }
+
+        .template-footer {
+            padding: 15px 30px;
+            border-top: 2px solid #ecf0f1;
+            text-align: center;
+            min-height: var(--footer-height);
+            background-color: var(--footer-bg-color);
+            color: var(--footer-text-color);
+            font-size: var(--footer-font-size);
+            flex-shrink: 0;
+        }
+
+        .footer-text {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .user-content {
+            white-space: pre-wrap;
+            margin-top: 20px;
+            flex: 1;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
+
+            .prescription-template {
+                box-shadow: none;
+                width: 210mm;
+                height: 297mm;
+                min-height: 297mm;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="prescription-template">
+        <div class="template-header">
+            <!-- LOGO_HTML -->
+            <div class="header-content">
+                <div class="header-left"><!-- HEADER_LEFT --></div>
+                <div class="header-center"><!-- HEADER_CENTER --></div>
+                <div class="header-right"><!-- HEADER_RIGHT --></div>
+            </div>
+        </div>
+        <div class="template-content">
+            <!-- WATERMARK_HTML -->
+            <!-- CONTENT_LABEL_HTML -->
+            <div class="user-content"><!-- CONTENT_TEXT --></div>
+        </div>
+        <div class="template-footer">
+            <!-- FOOTER_CONTENT -->
+        </div>
+    </div>
+</body>
+
+</html>

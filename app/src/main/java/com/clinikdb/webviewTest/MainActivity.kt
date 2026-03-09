@@ -1,11 +1,19 @@
 package com.clinikdb.webviewTest
+import android.content.Context
 import android.os.Bundle
+import android.print.PrintAttributes
+import android.print.PrintManager
+import android.util.Log
+import android.webkit.WebView as AndroidWebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.google.gson.Gson
 import com.multiplatform.webview.jsbridge.IJsMessageHandler
 import com.multiplatform.webview.jsbridge.JsMessage
@@ -18,218 +26,135 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
+import org.json.JSONObject
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
+import android.os.Environment
+import android.widget.Toast
+import java.io.File
+import java.io.FileOutputStream
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import android.util.Base64
+import com.multiplatform.webview.web.rememberWebViewNavigator
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DoctorAppointmentWebView()
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    PrescriptionScreen()
+                }
+            }
         }
     }
 }
 
 @Composable
-fun DoctorAppointmentWebView() {
-    // Load HTML file from assets
-    val webViewState = rememberWebViewState("file:///android_asset/calendar_web/consultation_calendar.html")
+fun PrescriptionScreen() {
+    val context = LocalContext.current
+    var prescriptionText by remember { mutableStateOf("") }
+    var configJson by remember { mutableStateOf<String?>(null) }
+    
+    val webViewState = rememberWebViewState("file:///android_asset/calendar_web/prescription.html")
+    val navigator = rememberWebViewNavigator()
     val jsBridge = rememberWebViewJsBridge()
 
-    // Register all API handlers
-    LaunchedEffect(jsBridge) {
-        jsBridge.register(GetDoctorHandler())
-        jsBridge.register(SetDoctorHandler())
-        jsBridge.register(SelectDateHandler())
-        jsBridge.register(QueryPatientHandler())
-        jsBridge.register(SaveAppointmentHandler())
-        jsBridge.register(DeleteAppointmentHandler())
-        jsBridge.register(EditAppointmentHandler())
+    var triggerImagePicker by remember { mutableStateOf(false) }
+
+    val contentResolver = context.contentResolver
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        triggerImagePicker = false
+        if (uri != null) {
+            val mimeType = contentResolver.getType(uri) ?: "image/png"
+            val bytes = contentResolver.openInputStream(uri)?.readBytes()
+            if (bytes != null) {
+                val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                val dataUrl = "data:$mimeType;base64,$base64"
+                navigator.evaluateJavaScript("window.setLogoImage(\"$dataUrl\")")
+            }
+        }
     }
 
-    WebView(
-        state = webViewState,
-        modifier = Modifier.fillMaxSize(),
-        webViewJsBridge = jsBridge
-    )
-}
+    if (triggerImagePicker) {
+        LaunchedEffect(triggerImagePicker) {
+            imagePickerLauncher.launch("image/*")
+        }
+    }
 
-// Data classes
-data class Doctor(
-    val id: String,
-    val name: String,
-    val specialization: String,
-    val email: String,
-    val phone: String
-)
-
-data class Patient(
-    val id: String,
-    val name: String,
-    val email: String,
-    val phone: String,
-    val date_of_birth: String,
-    val address: String
-)
-
-data class Appointment(
-    val id: String,
-    val title: String,
-    val notes: String,
-    val from: Long,
-    val duration_minutes: Int,
-    val patient_id: String,
-    val type: String
-)
-
-data class ApiResponse(
-    val code: Int,
-    val message: String,
-    val appointment_id: String? = null
-)
-
-// Dummy data
-object DummyData {
-    private val gson = Gson()
-
-    val doctor = Doctor(
-        id = "doc001",
-        name = "Dr. Joe Smith",
-        specialization = "General Practice",
-        email = "dr.joe@hospital.com",
-        phone = "+1234567890"
-    )
-
-    val patients = listOf(
-        Patient(
-            id = "1",
-            name = "John Smith",
-            email = "john.smith@email.com",
-            phone = "+1234567890",
-            date_of_birth = "1980-01-15",
-            address = "123 Main St, City, State"
-        ),
-        Patient(
-            id = "2",
-            name = "Sarah Johnson",
-            email = "sarah.j@email.com",
-            phone = "+1234567891",
-            date_of_birth = "1985-05-22",
-            address = "456 Oak Ave, City, State"
-        ),
-        Patient(
-            id = "3",
-            name = "Michael Brown",
-            email = "m.brown@email.com",
-            phone = "+1234567892",
-            date_of_birth = "1975-11-08",
-            address = "789 Pine Rd, City, State"
-        ),
-        Patient(
-            id = "4",
-            name = "Emily Davis",
-            email = "emily.d@email.com",
-            phone = "+1234567893",
-            date_of_birth = "1990-03-18",
-            address = "321 Elm St, City, State"
-        ),
-        Patient(
-            id = "5",
-            name = "David Wilson",
-            email = "d.wilson@email.com",
-            phone = "+1234567894",
-            date_of_birth = "1982-07-25",
-            address = "654 Maple Dr, City, State"
-        ),
-        Patient(
-            id = "6",
-            name = "Lisa Anderson",
-            email = "lisa.a@email.com",
-            phone = "+1234567895",
-            date_of_birth = "1988-09-12",
-            address = "987 Cedar Ln, City, State"
-        )
-    )
-
-    val appointments = mutableListOf<Appointment>().apply {
-        val titles = listOf(
-            "John Smith", "Sarah Johnson", "Michael Brown", "Emily Davis", "David Wilson",
-            "Lisa Anderson", "James Anderson", "Olivia Martinez", "Daniel Thomas", "Emma Jackson",
-            "Liam White", "Isabella Harris", "Ethan Lewis", "Mia Clark", "Noah Hall",
-            "Ava Allen", "Lucas Young", "Charlotte King", "Mason Wright", "Amelia Scott",
-            "Elijah Green", "Harper Adams", "Logan Baker", "Abigail Nelson", "Jacob Carter",
-            "Ella Mitchell", "William Perez", "Grace Roberts", "Benjamin Turner", "Chloe Phillips"
-        )
-
-        val notes = listOf("Regular checkup", "Follow-up", "Consultation", "Therapy session", "Routine visit")
-
-        val random = java.util.Random()
-        var idCounter = 1001
-
-        for (dayOffset in 0..2) {
-            val day = Calendar.getInstance().apply {
-                add(Calendar.DAY_OF_YEAR, dayOffset)
-                set(Calendar.HOUR_OF_DAY, 8)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
+    LaunchedEffect(jsBridge) {
+        jsBridge.register(SaveConfigHandler { json ->
+            Log.d("Config", json)
+            configJson = json
+        })
+        jsBridge.register(object : IJsMessageHandler {
+            override fun methodName(): String = "uploadLogo"
+            override fun handle(message: JsMessage, navigator: WebViewNavigator?, callback: (String) -> Unit) {
+                triggerImagePicker = true
+                callback("{}")
             }
+        })
+    }
 
-            // Start each day at 8:00 AM
-            var currentStart = day.clone() as Calendar
-
-            for (i in 0 until 10) {
-                val duration = listOf(30, 45, 60).random()
-                val note = notes.random()
-                val title = titles[i + (dayOffset * 10)]
-                val patientId = if (random.nextBoolean()) (1..6).random().toString() else ""
-                val type = if (patientId.isEmpty()) "Other" else "Patient"
-
-                val from = currentStart.timeInMillis / 1000
-
-                add(
-                    Appointment(
-                        id = (idCounter++).toString(),
-                        title = title,
-                        notes = note,
-                        from = from,
-                        duration_minutes = duration,
-                        patient_id = patientId,
-                        type = type
-                    )
+    Column(modifier = Modifier.fillMaxSize()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = prescriptionText,
+                    onValueChange = { prescriptionText = it },
+                    label = { Text("Prescription Content") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    maxLines = 5
                 )
 
-                // Move start time forward by duration + random gap (10–30 minutes)
-                currentStart.add(Calendar.MINUTE, duration + (10..30).random())
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Stop adding if we go past 18:00 (6 PM)
-                if (currentStart.get(Calendar.HOUR_OF_DAY) >= 18) break
+                Button(
+                    onClick = {
+                        configJson?.let { config ->
+                            printHtml(context, config, prescriptionText)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = configJson != null && prescriptionText.isNotBlank()
+                ) {
+                    Text(if (configJson == null) "Export Template Config first" else "Print Prescription to PDF")
+                }
             }
         }
+
+        Divider()
+
+        WebView(
+            state = webViewState,
+            navigator = navigator,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            webViewJsBridge = jsBridge
+        )
     }
 }
 
-
-
-// Message Handlers
-class GetDoctorHandler : IJsMessageHandler {
-    private val gson = Gson()
-
-    override fun methodName(): String = "getDoctor"
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(300) //simulate sql execution
-            val response = gson.toJson(DummyData.doctor)
-            callback(response)
-        }
-    }
-
-
-}
-
-class SetDoctorHandler : IJsMessageHandler {
-    override fun methodName(): String = "setDoctor"
+class SaveConfigHandler(private val onConfigReceived: (String) -> Unit) : IJsMessageHandler {
+    override fun methodName(): String = "saveConfig"
 
     override fun handle(
         message: JsMessage,
@@ -237,169 +162,88 @@ class SetDoctorHandler : IJsMessageHandler {
         callback: (String) -> Unit
     ) {
         CoroutineScope(Dispatchers.Main).launch {
-            // In real app, would store doctor data
+            onConfigReceived(message.params)
             callback("{\"success\": true}")
         }
     }
 }
 
-class SelectDateHandler : IJsMessageHandler {
-    private val gson = Gson()
-
-    override fun methodName(): String = "selectDate"
-
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(300) //simulate sql execution
-
-            val params = gson.fromJson(message.params, Map::class.java)
-            val from = (params["from"] as? Double)?.toLong() ?: 0
-            val to = (params["to"] as? Double)?.toLong() ?: Long.MAX_VALUE
-
-            val filteredAppointments = DummyData.appointments.filter { apt ->
-                apt.from >= from && apt.from < to
-            }
-
-            val response = gson.toJson(filteredAppointments)
-            callback(response)
+fun printHtml(context: Context, jsonStr: String, contentText: String) {
+    val html = generateHtml(context, jsonStr, contentText)
+    val webView = AndroidWebView(context)
+    webView.webViewClient = object : WebViewClient() {
+        override fun onPageFinished(view: AndroidWebView, url: String) {
+            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+            val printAdapter = view.createPrintDocumentAdapter("prescription_document")
+            printManager.print("Prescription", printAdapter, PrintAttributes.Builder().build())
         }
     }
+    webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
 }
 
-class QueryPatientHandler : IJsMessageHandler {
-    private val gson = Gson()
+fun generateHtml(context: Context, configJson: String, contentText: String): String {
+    val template = context.assets.open("print_template.html").bufferedReader().use { it.readText() }
 
-    override fun methodName(): String = "queryPatient"
+    val json = JSONObject(configJson)
+    val header = json.getJSONObject("header")
+    val content = json.getJSONObject("content")
+    val footer = json.getJSONObject("footer")
 
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(200) //simulate sql execution
+    val logoPosition = header.getString("logoPosition")
 
-            val params = gson.fromJson(message.params, Map::class.java)
-            val query = (params["query"] as? String)?.lowercase() ?: ""
+    val headerLeft = header.getString("leftContent").split("\n").joinToString("") { "<div class=\"header-text\">$it</div>" }
+    val headerCenter = header.getString("centerContent").split("\n").joinToString("") { "<div class=\"header-text\">$it</div>" }
+    val headerRight = header.getString("rightContent").split("\n").joinToString("") { "<div class=\"header-text\">$it</div>" }
+    
+    val footerContent = footer.getString("content").split("\n").joinToString("") { "<div class=\"footer-text\">$it</div>" }
+    val contentLabel = content.getString("label").split("\n").joinToString("") { "<div>$it</div>" }
 
-            val filteredPatients = DummyData.patients.filter { patient ->
-                patient.name.lowercase().contains(query) ||
-                        patient.email.lowercase().contains(query)
+    val logoBase64 = header.optString("logoBase64", "")
+    val logoSrc = if (logoBase64.isNotEmpty()) logoBase64 else "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%237dbdc1' d='M50 10 L55 35 L80 35 L60 50 L70 75 L50 60 L30 75 L40 50 L20 35 L45 35 Z'/%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%237dbdc1' stroke-width='3'/%3E%3C/svg%3E"
+    
+    val logoHtml = if (header.getBoolean("enableLogo")) """
+        <div class="header-logo logo-$logoPosition">
+            <img src="$logoSrc" alt="Logo">
+        </div>
+    """.trimIndent() else ""
+
+    val watermarkHtml = if (content.getBoolean("enableWatermark")) """
+        <div class="watermark">${content.getString("watermarkText")}</div>
+    """.trimIndent() else ""
+
+    val contentLabelHtml = if (content.getString("label").isNotEmpty()) """
+        <div class="content-label">$contentLabel</div>
+    """.trimIndent() else ""
+
+    val cssVars = """
+        <style id="dynamic-css-vars">
+            :root {
+                --header-height: ${header.getString("height")}mm;
+                --header-bg-color: ${header.getString("backgroundColor")};
+                --header-text-color: ${header.getString("textColor")};
+                --header-font-size: ${header.getString("fontSize")}px;
+                --logo-order: ${if (logoPosition == "left") "1" else if (logoPosition == "center") "2" else "3"};
+                --logo-margin: ${if (logoPosition == "center") "0 auto" else if (logoPosition == "right") "0 0 0 auto" else "0 auto 0 0"};
+                --header-logo-size: ${header.getString("logoSize")}px;
+                --content-padding: ${content.getString("padding")}mm;
+                --content-bg-color: ${content.getString("backgroundColor")};
+                --content-text-color: ${content.getString("textColor")};
+                --footer-height: ${footer.getString("height")}mm;
+                --footer-bg-color: ${footer.getString("backgroundColor")};
+                --footer-text-color: ${footer.getString("textColor")};
+                --footer-font-size: ${footer.getString("fontSize")}px;
             }
+        </style>
+    """.trimIndent()
 
-            val response = gson.toJson(filteredPatients)
-            callback(response)
-        }
-    }
-}
-
-class SaveAppointmentHandler : IJsMessageHandler {
-    private val gson = Gson()
-
-    override fun methodName(): String = "saveAppointment"
-
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(400) //simulate sql execution
-
-            val appointmentData = gson.fromJson(message.params, Map::class.java)
-            val newId = System.currentTimeMillis().toString()
-
-            val newAppointment = Appointment(
-                id = newId,
-                title = appointmentData["title"] as? String ?: "",
-                notes = appointmentData["notes"] as? String ?: "",
-                from = (appointmentData["from"] as? Double)?.toLong() ?: 0,
-                duration_minutes = (appointmentData["duration_minutes"] as? Double)?.toInt() ?: 30,
-                patient_id = appointmentData["patient_id"] as? String ?: "",
-                type = if ((appointmentData["patient_id"] as? String)?.isNotEmpty() == true) "Patient" else "Other"
-            )
-
-            DummyData.appointments.add(newAppointment)
-
-            val response = ApiResponse(
-                code = 200,
-                message = "OK",
-                appointment_id = newId
-            )
-
-            callback(gson.toJson(response))
-        }
-    }
-}
-
-class DeleteAppointmentHandler : IJsMessageHandler {
-    private val gson = Gson()
-
-    override fun methodName(): String = "deleteAppointment"
-
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(300) //simulate sql execution
-
-            val params = gson.fromJson(message.params, Map::class.java)
-            val appointmentId = params["appointmentId"] as? String ?: ""
-
-            val removed = DummyData.appointments.removeIf { it.id == appointmentId }
-
-            val response = if (removed) {
-                ApiResponse(code = 200, message = "OK")
-            } else {
-                ApiResponse(code = 400, message = "Appointment not found")
-            }
-
-            callback(gson.toJson(response))
-        }
-    }
-}
-
-class EditAppointmentHandler : IJsMessageHandler {
-    private val gson = Gson()
-
-    override fun methodName(): String = "editAppointment"
-
-    override fun handle(
-        message: JsMessage,
-        navigator: WebViewNavigator?,
-        callback: (String) -> Unit
-    ) {
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(400) //simulate sql execution
-
-            val appointmentData = gson.fromJson(message.params, Map::class.java)
-            val appointmentId = appointmentData["appointment_id"] as? String ?: ""
-
-            val index = DummyData.appointments.indexOfFirst { it.id == appointmentId }
-
-            val response = if (index >= 0) {
-                val existing = DummyData.appointments[index]
-                DummyData.appointments[index] = Appointment(
-                    id = existing.id,
-                    title = appointmentData["title"] as? String ?: existing.title,
-                    notes = appointmentData["notes"] as? String ?: existing.notes,
-                    from = (appointmentData["from"] as? Double)?.toLong() ?: existing.from,
-                    duration_minutes = (appointmentData["duration_minutes"] as? Double)?.toInt() ?: existing.duration_minutes,
-                    patient_id = appointmentData["patient_id"] as? String ?: existing.patient_id,
-                    type = if ((appointmentData["patient_id"] as? String)?.isNotEmpty() == true) "Patient" else "Other"
-                )
-                ApiResponse(code = 200, message = "OK")
-            } else {
-                ApiResponse(code = 400, message = "Appointment not found")
-            }
-
-            callback(gson.toJson(response))
-        }
-    }
+    return template
+        .replace("<!-- DYNAMIC_CSS_VARS -->", cssVars)
+        .replace("<!-- LOGO_HTML -->", logoHtml)
+        .replace("<!-- HEADER_LEFT -->", headerLeft)
+        .replace("<!-- HEADER_CENTER -->", headerCenter)
+        .replace("<!-- HEADER_RIGHT -->", headerRight)
+        .replace("<!-- WATERMARK_HTML -->", watermarkHtml)
+        .replace("<!-- CONTENT_LABEL_HTML -->", contentLabelHtml)
+        .replace("<!-- CONTENT_TEXT -->", contentText)
+        .replace("<!-- FOOTER_CONTENT -->", footerContent)
 }
