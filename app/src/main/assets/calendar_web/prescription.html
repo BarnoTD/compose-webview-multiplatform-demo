@@ -213,6 +213,29 @@
             box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
         }
 
+        .save-status {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+            display: none;
+        }
+
+        .save-status.is-success {
+            display: block;
+            background: #ecfdf3;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .save-status.is-error {
+            display: block;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
         /* Preview Panel */
         .preview-panel {
             padding: 40px;
@@ -683,6 +706,7 @@
                 <button class="btn" onclick="exportAsJSON()">Export Configuration</button>
                 <button class="btn btn-secondary" onclick="window.print()">Print Template</button>
                 <button class="btn btn-secondary" onclick="resetTemplate()">Reset to Default</button>
+                <div id="saveStatus" class="save-status" role="status" aria-live="polite"></div>
             </div>
         </div>
 
@@ -744,6 +768,8 @@
         </div>
     </div>
 
+    <script src="prescription_api_ios.js"></script>
+<!--    <script src="prescription_api_android.js"></script>-->
     <script>
         // Initialize default logo (medical symbol)
         const defaultLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%237dbdc1' d='M50 10 L55 35 L80 35 L60 50 L70 75 L50 60 L30 75 L40 50 L20 35 L45 35 Z'/%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='%237dbdc1' stroke-width='3'/%3E%3C/svg%3E";
@@ -777,19 +803,14 @@
 
         // Logo upload bridge
         document.getElementById('logoUploadBtn').addEventListener('click', function () {
-            if (window.kmpJsBridge) {
-                window.kmpJsBridge.callNative("uploadLogo", "");
+            if (API?.uploadLogo) {
+                API.uploadLogo();
             } else {
                 document.getElementById('logoUpload').click();
             }
         });
 
-        window.setLogoImage = function (base64Data) {
-            if (base64Data) {
-                document.getElementById('logoImg').src = base64Data;
-                updateTemplate();
-            }
-        };
+        window.updateTemplate = updateTemplate;
 
         // Fallback logo upload for browser
         document.getElementById('logoUpload').addEventListener('change', function (e) {
@@ -903,6 +924,60 @@
         function setZoom(scale) {
             document.getElementById('template').style.transform = `scale(${scale})`;
         }
+
+        window.applySavedConfig = function (payload) {
+            if (!payload) {
+                return;
+            }
+
+            let config = payload;
+            if (typeof payload === 'string') {
+                try {
+                    config = JSON.parse(payload);
+                } catch (error) {
+                    console.error('Failed to parse saved prescription config', error);
+                    return;
+                }
+            }
+
+            if (config.header) {
+                document.getElementById('headerHeight').value = config.header.height ?? document.getElementById('headerHeight').value;
+                document.getElementById('headerBg').value = config.header.backgroundColor ?? document.getElementById('headerBg').value;
+                document.getElementById('headerTextColor').value = config.header.textColor ?? document.getElementById('headerTextColor').value;
+                document.getElementById('headerFontSize').value = config.header.fontSize ?? document.getElementById('headerFontSize').value;
+                document.getElementById('enableLogo').checked = Boolean(config.header.enableLogo);
+                document.getElementById('logoSize').value = config.header.logoSize ?? document.getElementById('logoSize').value;
+                document.getElementById('logoPosition').value = config.header.logoPosition ?? document.getElementById('logoPosition').value;
+                document.getElementById('headerLayout').value = config.header.layout ?? document.getElementById('headerLayout').value;
+                document.getElementById('headerLeft').value = config.header.leftContent ?? '';
+                document.getElementById('headerCenter').value = config.header.centerContent ?? '';
+                document.getElementById('headerRight').value = config.header.rightContent ?? '';
+                if (config.header.logoImage) {
+                    API.setLogoImage(config.header.logoImage);
+                }
+            }
+
+            if (config.content) {
+                document.getElementById('contentPadding').value = config.content.padding ?? document.getElementById('contentPadding').value;
+                document.getElementById('contentBg').value = config.content.backgroundColor ?? document.getElementById('contentBg').value;
+                document.getElementById('contentTextColor').value = config.content.textColor ?? document.getElementById('contentTextColor').value;
+                document.getElementById('enableWatermark').checked = Boolean(config.content.enableWatermark);
+                document.getElementById('watermarkText').value = config.content.watermarkText ?? '';
+                document.getElementById('contentLabel').value = config.content.label ?? '';
+            }
+
+            if (config.footer) {
+                document.getElementById('footerHeight').value = config.footer.height ?? document.getElementById('footerHeight').value;
+                document.getElementById('footerBg').value = config.footer.backgroundColor ?? document.getElementById('footerBg').value;
+                document.getElementById('footerTextColor').value = config.footer.textColor ?? document.getElementById('footerTextColor').value;
+                document.getElementById('footerFontSize').value = config.footer.fontSize ?? document.getElementById('footerFontSize').value;
+                document.getElementById('footerContent').value = config.footer.content ?? '';
+            }
+
+            document.getElementById('logoSettings').style.display = document.getElementById('enableLogo').checked ? 'block' : 'none';
+            document.getElementById('headerLogo').style.display = document.getElementById('enableLogo').checked ? 'block' : 'none';
+            updateTemplate();
+        };
 
         function exportAsHTML() {
             const template = document.getElementById('template').cloneNode(true);
@@ -1034,7 +1109,40 @@
             URL.revokeObjectURL(url);
         }
 
+        let saveStatusTimeout = null;
+
+        window.showSaveStatus = function (payload) {
+            const statusEl = document.getElementById('saveStatus');
+            if (!statusEl) {
+                return;
+            }
+
+            let state = payload;
+            if (typeof payload === 'string') {
+                try {
+                    state = JSON.parse(payload);
+                } catch (error) {
+                    state = { success: false, message: payload };
+                }
+            }
+
+            const success = Boolean(state?.success);
+            const message = state?.message || (success ? 'Configuration saved.' : 'Failed to save configuration.');
+
+            statusEl.textContent = message;
+            statusEl.className = `save-status ${success ? 'is-success' : 'is-error'}`;
+
+            if (saveStatusTimeout) {
+                clearTimeout(saveStatusTimeout);
+            }
+            saveStatusTimeout = setTimeout(() => {
+                statusEl.textContent = '';
+                statusEl.className = 'save-status';
+            }, 4000);
+        };
+
         function exportAsJSON() {
+            const currentLogo = document.getElementById('logoImg').src;
             const config = {
                 header: {
                     height: document.getElementById('headerHeight').value,
@@ -1047,7 +1155,8 @@
                     layout: document.getElementById('headerLayout').value,
                     leftContent: document.getElementById('headerLeft').value,
                     centerContent: document.getElementById('headerCenter').value,
-                    rightContent: document.getElementById('headerRight').value
+                    rightContent: document.getElementById('headerRight').value,
+                    logoImage: currentLogo !== defaultLogo ? currentLogo : null
                 },
                 content: {
                     padding: document.getElementById('contentPadding').value,
@@ -1065,11 +1174,11 @@
                     content: document.getElementById('footerContent').value
                 }
             };
-
-            if (window.kmpJsBridge) {
-                window.kmpJsBridge.callNative("saveConfig", JSON.stringify(config));
+            
+            if (API?.saveConfig) {
+                API.saveConfig(config);
             } else {
-                console.log("kmpJsBridge not found, config: ", config);
+                console.log("Bridge not found, config: ", config);
             }
 
             const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
@@ -1081,14 +1190,96 @@
             URL.revokeObjectURL(url);
         }
 
-        function resetTemplate() {
-            if (confirm('Reset all settings to default?')) {
-                location.reload();
-            }
-        }
-
         // Initialize template on load
         updateTemplate();
+        if (API?.requestInitialConfig) {
+            API.requestInitialConfig();
+        }
+        
+        
+        
+        const DEFAULTS = {
+            header: {
+                height: 80,
+                bg: "#ffffff",
+                textColor: "#000000",
+                fontSize: 14,
+                enableLogo: true,
+                logoSize: 80,
+                logoPosition: "left",
+                layout: "left-center-right",
+                leftContent: ``,
+                centerContent: ``,
+                rightContent: ``,
+                logoImage: null
+            },
+            content: {
+                padding: 30,
+                bg: "#ffffff",
+                textColor: "#000000",
+                enableWatermark: false,
+                watermarkText: "",
+                label: ""
+            },
+            footer: {
+                height: 40,
+                bg: "#7dbdc1",
+                textColor: "#ffffff",
+                fontSize: 12,
+                content: ``
+            }
+        };
+        
+        function resetTemplate() {
+            if (!confirm('Reset all settings to default?')) return;
+
+            // HEADER
+            document.getElementById('headerHeight').value = DEFAULTS.header.height;
+            document.getElementById('headerBg').value = DEFAULTS.header.bg;
+            document.getElementById('headerTextColor').value = DEFAULTS.header.textColor;
+            document.getElementById('headerFontSize').value = DEFAULTS.header.fontSize;
+            document.getElementById('enableLogo').checked = DEFAULTS.header.enableLogo;
+            document.getElementById('logoSize').value = DEFAULTS.header.logoSize;
+            document.getElementById('logoPosition').value = DEFAULTS.header.logoPosition;
+            document.getElementById('headerLayout').value = DEFAULTS.header.layout;
+
+            document.getElementById('headerLeft').value = DEFAULTS.header.leftContent;
+            document.getElementById('headerCenter').value = DEFAULTS.header.centerContent;
+            document.getElementById('headerRight').value = DEFAULTS.header.rightContent;
+
+            // CONTENT
+            document.getElementById('contentPadding').value = DEFAULTS.content.padding;
+            document.getElementById('contentBg').value = DEFAULTS.content.bg;
+            document.getElementById('contentTextColor').value = DEFAULTS.content.textColor;
+            document.getElementById('enableWatermark').checked = DEFAULTS.content.enableWatermark;
+            document.getElementById('watermarkText').value = DEFAULTS.content.watermarkText;
+            document.getElementById('contentLabel').value = DEFAULTS.content.label;
+
+            // FOOTER
+            document.getElementById('footerHeight').value = DEFAULTS.footer.height;
+            document.getElementById('footerBg').value = DEFAULTS.footer.bg;
+            document.getElementById('footerTextColor').value = DEFAULTS.footer.textColor;
+            document.getElementById('footerFontSize').value = DEFAULTS.footer.fontSize;
+            document.getElementById('footerContent').value = DEFAULTS.footer.content;
+
+            // LOGO
+            document.getElementById('logoImg').src = defaultLogo;
+
+            // UI toggles
+            document.getElementById('logoSettings').style.display = 'block';
+            document.getElementById('headerLogo').style.display = 'block';
+
+            // Update range labels manually
+            document.getElementById('headerHeightValue').textContent = DEFAULTS.header.height + 'mm';
+            document.getElementById('headerFontSizeValue').textContent = DEFAULTS.header.fontSize + 'px';
+            document.getElementById('logoSizeValue').textContent = DEFAULTS.header.logoSize + 'px';
+            document.getElementById('contentPaddingValue').textContent = DEFAULTS.content.padding + 'mm';
+            document.getElementById('footerHeightValue').textContent = DEFAULTS.footer.height + 'mm';
+            document.getElementById('footerFontSizeValue').textContent = DEFAULTS.footer.fontSize + 'px';
+
+            // Apply everything
+            updateTemplate();
+        }
     </script>
 </body>
 
